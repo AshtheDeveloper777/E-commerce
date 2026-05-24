@@ -159,19 +159,51 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
     const total = getGrandTotal();
     const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+    // Create Razorpay order on server (uses secret key securely)
+    let razorpayOrder;
+    try {
+      const rpRes = await fetch('/api/razorpay/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: total, receipt: orderId }),
+      });
+      razorpayOrder = await rpRes.json();
+      if (!rpRes.ok) {
+        throw new Error(razorpayOrder.error || 'Could not start payment.');
+      }
+    } catch (err) {
+      setLoading(false);
+      useCartStore.getState().addToast(err.message || 'Payment setup failed.');
+      return;
+    }
+
+    const checkoutKey = razorpayOrder.keyId || razorpayKey;
+    if (!checkoutKey) {
+      setLoading(false);
+      useCartStore.getState().addToast(
+        'Razorpay Key ID missing. Add VITE_RAZORPAY_KEY_ID in Vercel env vars.'
+      );
+      return;
+    }
+
     // Setup Razorpay checkout options
     const options = {
-      key: 'rzp_test_SfiKsZgjUwGZtk', // Test Key
-      amount: Math.round(total * 100), // In paise (INR)
-      currency: 'INR',
+      key: checkoutKey,
+      amount: razorpayOrder.amount,
+      currency: razorpayOrder.currency || 'INR',
+      order_id: razorpayOrder.orderId,
       name: 'SYNTH.CO',
       description: 'Premium Workspace Gear',
-      image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80',
+      image: `${window.location.origin}/products/prod_kbd_01.jpg`,
       handler: async function (response) {
         try {
           useCartStore.getState().addToast('Payment authorized. Securing order in database...');
           
-          // Secure API request to Express server to save order and decrement stock in PostgreSQL!
           const orderResponse = await fetch('/api/orders', {
             method: 'POST',
             headers: {
@@ -181,6 +213,8 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
             body: JSON.stringify({
               id: orderId,
               paymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
               amount: total,
               address: `${formData.address}, ${formData.city}, ${formData.zipCode}, ${formData.country}`,
               phone: formData.phone,
@@ -189,7 +223,6 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
                 name: item.name,
                 price: item.price,
                 quantity: item.quantity,
-                icon: item.icon || '📦',
                 image: item.image
               }))
             })

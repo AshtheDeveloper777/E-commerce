@@ -37,10 +37,23 @@ git push -u origin main
 |------|--------|
 | `DATABASE_URL` | Your Supabase pooler URI (`postgresql://postgres.[ref]:[password]@aws-1-ap-south-1.pooler.supabase.com:6543/postgres`) |
 | `JWT_SECRET` | A long random secret string |
+| `RAZORPAY_KEY_ID` | From [Razorpay Dashboard](https://dashboard.razorpay.com/app/keys) → Key ID |
+| `RAZORPAY_KEY_SECRET` | Razorpay Key Secret (server only — never expose to frontend) |
+| `VITE_RAZORPAY_KEY_ID` | Same Key ID as above (required for Vite build / checkout UI) |
 
 4. Click **Deploy**.
 
-### 3. Supabase tips for serverless
+### 3. Razorpay payments
+
+Checkout uses **Razorpay** (INR):
+
+1. Create an account at [razorpay.com](https://razorpay.com).
+2. Use **Test Mode** keys while developing.
+3. Flow: server creates order → Razorpay popup → server verifies signature → order saved in DB.
+
+`/api/health` returns `"razorpay": true` when keys are configured.
+
+### 4. Supabase tips for serverless
 
 - Use the **Transaction pooler** connection string (port **6543**), not the direct DB port.
 - In Supabase → Project Settings → Database, enable pooler if needed.

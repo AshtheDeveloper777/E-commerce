@@ -5,6 +5,7 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { initPool, getPool } = require('./db');
+const { isConfigured, getRazorpayInstance, verifyPaymentSignature } = require('./razorpay');
 
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET || 'SYNTH_JWT_SECRET_KEY_2026_SECURE_TOKEN';
@@ -342,9 +343,47 @@ const authenticateToken = (req, res, next) => {
 app.get('/api/health', async (req, res) => {
   try {
     await getPool().query('SELECT 1');
-    res.json({ ok: true, database: 'connected' });
+    res.json({
+      ok: true,
+      database: 'connected',
+      razorpay: isConfigured(),
+    });
   } catch (err) {
     res.status(503).json({ ok: false, error: err.message });
+  }
+});
+
+// Create Razorpay order (server-side — keeps secret key off the client)
+app.post('/api/razorpay/order', authenticateToken, async (req, res) => {
+  const { amount, receipt } = req.body;
+
+  if (!amount || Number(amount) <= 0) {
+    return res.status(400).json({ error: 'Invalid payment amount.' });
+  }
+
+  if (!isConfigured()) {
+    return res.status(503).json({
+      error: 'Razorpay is not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.',
+    });
+  }
+
+  try {
+    const instance = getRazorpayInstance();
+    const order = await instance.orders.create({
+      amount: Math.round(Number(amount) * 100),
+      currency: 'INR',
+      receipt: receipt || `rcpt_${Date.now()}`,
+    });
+
+    res.json({
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+    });
+  } catch (err) {
+    console.error('Razorpay order error:', err.message);
+    res.status(500).json({ error: 'Could not create Razorpay order.' });
   }
 });
 
@@ -455,11 +494,34 @@ app.get('/api/products', async (req, res) => {
 
 // CREATE NEW ORDER (VERIFIES STOCK, DECREMENTS STOCK, WRITES ORDER)
 app.post('/api/orders', authenticateToken, async (req, res) => {
-  const { id, paymentId, amount, address, phone, items } = req.body;
+  const {
+    id,
+    paymentId,
+    razorpayOrderId,
+    razorpaySignature,
+    amount,
+    address,
+    phone,
+    items,
+  } = req.body;
   const userId = req.user.id;
 
   if (!id || !paymentId || !amount || !address || !phone || !items || !Array.isArray(items)) {
     return res.status(400).json({ error: 'Invalid order payload details.' });
+  }
+
+  if (isConfigured()) {
+    if (!razorpayOrderId || !razorpaySignature) {
+      return res.status(400).json({ error: 'Payment verification data is missing.' });
+    }
+    const valid = verifyPaymentSignature({
+      orderId: razorpayOrderId,
+      paymentId,
+      signature: razorpaySignature,
+    });
+    if (!valid) {
+      return res.status(400).json({ error: 'Payment verification failed. Order not saved.' });
+    }
   }
 
   try {

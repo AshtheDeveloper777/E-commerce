@@ -4,11 +4,8 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "installCommand": "npm install",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" }
-  ],
   "functions": {
-    "api/index.js": {
+    "api/**/*.js": {
       "maxDuration": 30,
       "includeFiles": "server/**"
     }

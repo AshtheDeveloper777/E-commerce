@@ -19,8 +19,10 @@ async function initPool() {
   }
 
   if (connectionString) {
+    // Strip sslmode from URL so Node pg uses our ssl config (fixes Supabase on Vercel)
+    const dbUrl = connectionString.replace(/[?&]sslmode=[^&]*/g, '').replace(/\?$/, '');
     const pgPool = new PgPool({
-      connectionString,
+      connectionString: dbUrl,
       ssl: { rejectUnauthorized: false },
     });
 

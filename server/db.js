@@ -25,6 +25,7 @@ async function initPool() {
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000, // 5 seconds connection timeout
+      query_timeout: 10000, // 10 seconds query timeout
     });
 
     try {

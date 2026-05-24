@@ -37,6 +37,20 @@ app.get('/api/products/:id/image', (req, res) => {
 // Dynamic database schema initialization
 const initializeDatabase = async () => {
   try {
+    console.log('Checking if database is already initialized...');
+    await getPool().query('SELECT 1 FROM products LIMIT 1');
+    console.log('Database tables already exist. Skipping schema initialization.');
+    return;
+  } catch (err) {
+    if (err.code === '42P01' || err.message.includes('does not exist')) {
+      console.log('Database tables do not exist. Proceeding to schema initialization...');
+    } else {
+      console.error('Database connection/query failed during check:', err.message);
+      throw err;
+    }
+  }
+
+  try {
     console.log('Initializing database schemas...');
 
     // 1. Users Table

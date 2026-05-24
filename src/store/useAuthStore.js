@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useCartStore } from './useCartStore';
+import { parseApiResponse } from '../utils/api';
 
 // Safe client-side base64 JWT payload decoder
 const parseJwt = (token) => {
@@ -53,7 +54,7 @@ export const useAuthStore = create((set, get) => ({
         body: JSON.stringify({ email, password })
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || 'Incorrect email or password.');
@@ -85,7 +86,7 @@ export const useAuthStore = create((set, get) => ({
         body: JSON.stringify({ fullName, email, password })
       });
 
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || 'Could not register user account.');

@@ -4,8 +4,22 @@ const { app, initialize } = require('../server/app');
 const handler = serverless(app);
 let ready;
 
+/** Vercel catch-all often strips the /api prefix — Express routes need /api/... */
+function normalizePath(req) {
+  const url = req.url || '';
+  if (!url.startsWith('/api')) {
+    req.url = `/api${url.startsWith('/') ? url : `/${url}`}`;
+  }
+}
+
 module.exports = async (req, res) => {
-  if (!ready) ready = initialize();
+  normalizePath(req);
+  if (!ready) {
+    ready = initialize().catch((err) => {
+      ready = null; // Reset so that next request retries initialization
+      throw err;
+    });
+  }
   await ready;
   return handler(req, res);
 };

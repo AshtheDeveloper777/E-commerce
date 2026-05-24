@@ -63,7 +63,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
       if (!result.success) {
         const errs = {};
-        result.error.errors.forEach((err) => {
+        result.error.issues.forEach((err) => {
           errs[err.path[0]] = err.message;
         });
         setFieldErrors(errs);
@@ -77,7 +77,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
       if (!result.success) {
         const errs = {};
-        result.error.errors.forEach((err) => {
+        result.error.issues.forEach((err) => {
           errs[err.path[0]] = err.message;
         });
         setFieldErrors(errs);

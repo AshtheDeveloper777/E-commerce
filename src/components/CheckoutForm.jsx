@@ -73,10 +73,10 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
         return next;
       });
     } catch (err) {
-      if (err.errors && err.errors[0]) {
+      if (err.issues?.[0]) {
         setErrors((prev) => ({
           ...prev,
-          [name]: err.errors[0].message
+          [name]: err.issues[0].message
         }));
       }
     }
@@ -135,7 +135,7 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
 
     if (!result.success) {
       const newErrors = {};
-      result.error.errors.forEach((err) => {
+      result.error.issues.forEach((err) => {
         const fieldName = err.path[0];
         if (!newErrors[fieldName]) {
           newErrors[fieldName] = err.message;

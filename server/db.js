@@ -24,6 +24,7 @@ async function initPool() {
     const pgPool = new PgPool({
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000, // 5 seconds connection timeout
     });
 
     try {

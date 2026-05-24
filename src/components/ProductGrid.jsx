@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCartStore } from '../store/useCartStore';
 import ProductCard from './ProductCard';
-import { Search, Info, Loader2, Sparkles } from 'lucide-react';
+import { Search, Info } from 'lucide-react';
+import { parseApiResponse } from '../utils/api';
 
 export default function ProductGrid({ onCardClick }) {
   const [productsList, setProductsList] = useState([]);
@@ -16,13 +17,7 @@ export default function ProductGrid({ onCardClick }) {
       setLoading(true);
       setFetchError(null);
       const response = await fetch('/api/products');
-      const contentType = response.headers.get('content-type') || '';
-
-      if (!contentType.includes('application/json')) {
-        throw new Error('API returned invalid response. Check server / DATABASE_URL on Vercel.');
-      }
-
-      const data = await response.json();
+      const data = await parseApiResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || `Failed to load products (${response.status})`);

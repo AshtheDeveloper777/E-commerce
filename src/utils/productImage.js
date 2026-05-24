@@ -1,9 +1,9 @@
 const PLACEHOLDER = '/products/placeholder.svg';
 
-/** Local image path — served from public/products (no external CDN). */
+/** Product images via API so they work on Vercel production. */
 export function getProductImageUrl(product) {
   if (!product?.id) return PLACEHOLDER;
-  return `/products/${product.id}.jpg`;
+  return `/api/products/${product.id}/image`;
 }
 
 export { PLACEHOLDER };

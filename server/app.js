@@ -16,10 +16,23 @@ const PRODUCT_IDS = [
   'prod_aud_06', 'prod_chair_07', 'prod_mon_08', 'prod_stand_09', 'prod_bar_10',
 ];
 
-const localProductImage = (id) => `/products/${id}.jpg`;
+const localProductImage = (id) => `/api/products/${id}/image`;
+const productsImageDir = path.join(__dirname, '..', 'public', 'products');
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+
+// Serve product images via API (reliable on Vercel; static /products/* can miss SPA routing)
+app.get('/api/products/:id/image', (req, res) => {
+  const filePath = path.join(productsImageDir, `${req.params.id}.jpg`);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.sendFile(path.join(productsImageDir, 'placeholder.svg'), (err2) => {
+        if (err2) res.status(404).json({ error: 'Image not found' });
+      });
+    }
+  });
+});
 
 // Dynamic database schema initialization
 const initializeDatabase = async () => {
@@ -71,7 +84,6 @@ const initializeDatabase = async () => {
 
     console.log('Database tables verified successfully.');
     await seedProducts();
-    await syncProductImages();
   } catch (err) {
     console.error('Error during database initialization:', err.message);
   }
@@ -317,6 +329,7 @@ const seedProducts = async () => {
     }
 
     console.log('Seeded 10 premium products successfully.');
+    await syncProductImages();
   } catch (err) {
     console.error('Error during product seeding:', err.message);
   }

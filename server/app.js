@@ -341,15 +341,24 @@ const authenticateToken = (req, res, next) => {
 };
 
 app.get('/api/health', async (req, res) => {
+  const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
   try {
     await getPool().query('SELECT 1');
     res.json({
       ok: true,
       database: 'connected',
+      databaseUrlConfigured: hasDatabaseUrl,
       razorpay: isConfigured(),
     });
   } catch (err) {
-    res.status(503).json({ ok: false, error: err.message });
+    res.status(503).json({
+      ok: false,
+      databaseUrlConfigured: hasDatabaseUrl,
+      error: err.message,
+      hint: !hasDatabaseUrl
+        ? 'Add DATABASE_URL in Vercel → Settings → Environment Variables (Supabase pooler URI, port 6543).'
+        : undefined,
+    });
   }
 });
 

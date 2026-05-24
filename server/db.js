@@ -30,9 +30,14 @@ async function initPool() {
       pool = pgPool;
       return pool;
     } catch (err) {
-      console.warn(`PostgreSQL connection failed: ${err.message}`);
-      console.warn('Falling back to in-memory database (resets when server stops).');
       await pgPool.end().catch(() => {});
+      if (process.env.VERCEL) {
+        throw new Error(
+          `DATABASE_URL connection failed on Vercel: ${err.message}. Check your Supabase pooler URL and password.`
+        );
+      }
+      console.warn(`PostgreSQL connection failed: ${err.message}`);
+      console.warn('Falling back to in-memory database (local dev only).');
     }
   } else {
     console.log('No DATABASE_URL — using in-memory database for local development.');

@@ -31,17 +31,27 @@ git push -u origin main
 
 1. Go to [vercel.com/new](https://vercel.com/new) and import your repository.
 2. Framework preset: **Vite** (auto-detected from `vercel.json`).
-3. Add **Environment Variables** (Production + Preview):
+3. **Before Deploy** → open **Environment Variables** and add **all** of these for **Production** and **Preview**:
 
-| Name | Value |
-|------|--------|
-| `DATABASE_URL` | Your Supabase pooler URI (`postgresql://postgres.[ref]:[password]@aws-1-ap-south-1.pooler.supabase.com:6543/postgres`) |
-| `JWT_SECRET` | A long random secret string |
-| `RAZORPAY_KEY_ID` | From [Razorpay Dashboard](https://dashboard.razorpay.com/app/keys) → Key ID |
-| `RAZORPAY_KEY_SECRET` | Razorpay Key Secret (server only — never expose to frontend) |
-| `VITE_RAZORPAY_KEY_ID` | Same Key ID as above (required for Vite build / checkout UI) |
+| Variable | Required | How to get it |
+|----------|----------|----------------|
+| **`DATABASE_URL`** | **Yes** | Supabase → **Project Settings** → **Database** → **Connection string** → choose **URI** → **Session pooler** (port **6543**) |
+| `JWT_SECRET` | Yes | Any long random string |
+| `RAZORPAY_KEY_ID` | Yes | [Razorpay Dashboard](https://dashboard.razorpay.com/app/keys) |
+| `RAZORPAY_KEY_SECRET` | Yes | Same Razorpay page (secret key) |
+| `VITE_RAZORPAY_KEY_ID` | Yes | Same value as `RAZORPAY_KEY_ID` |
 
-4. Click **Deploy**.
+**`DATABASE_URL` example** (replace password and project ref):
+
+```
+postgresql://postgres.hdoejjtkbxyjloezpqhn:YOUR_PASSWORD@aws-1-ap-south-1.pooler.supabase.com:6543/postgres
+```
+
+> Without `DATABASE_URL`, the API will fail on Vercel — products, login, and orders need the database.
+
+4. Click **Deploy**, then redeploy after adding env vars if the first deploy failed.
+
+5. Verify: `https://your-app.vercel.app/api/health` → `"database": "connected"` and `"databaseUrlConfigured": true`.
 
 ### 3. Razorpay payments
 

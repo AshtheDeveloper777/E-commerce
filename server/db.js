@@ -1,9 +1,9 @@
 const { Pool: PgPool } = require('pg');
-const { newDb } = require('pg-mem');
 
 let pool = null;
 
 function createInMemoryPool() {
+  const { newDb } = require('pg-mem');
   const mem = newDb({ autoCreateForeignKeyIndices: true });
   const { Pool } = mem.adapters.createPg();
   return new Pool();

@@ -37,9 +37,15 @@ app.get('/api/products/:id/image', (req, res) => {
 // Dynamic database schema initialization
 const initializeDatabase = async () => {
   try {
-    console.log('Checking if database is already initialized...');
-    await getPool().query('SELECT 1 FROM products LIMIT 1');
-    console.log('Database tables already exist. Skipping schema initialization.');
+    console.log('Checking if database is already initialized and seeded...');
+    const { rows } = await getPool().query('SELECT COUNT(*) FROM products');
+    const count = parseInt(rows[0].count, 10);
+    if (count > 0) {
+      console.log('Database tables already exist and are seeded. Skipping schema initialization.');
+      return;
+    }
+    console.log('Database tables exist but are empty. Proceeding to seed products...');
+    await seedProducts();
     return;
   } catch (err) {
     if (err.code === '42P01' || err.message.includes('does not exist')) {

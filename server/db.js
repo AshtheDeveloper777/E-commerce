@@ -52,7 +52,7 @@ async function initPool() {
       pool = pgPool;
       return pool;
     } catch (err) {
-      await pgPool.end().catch(() => {});
+      pgPool.end().catch(() => {}); // Close in background, do not block the error boundary
       if (process.env.VERCEL) {
         throw new Error(
           `DATABASE_URL connection failed on Vercel: ${err.message}. Check your Supabase pooler URL and password.`

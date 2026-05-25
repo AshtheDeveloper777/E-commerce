@@ -24,8 +24,19 @@ async function initPool() {
     const pgPool = new PgPool({
       connectionString: dbUrl,
       ssl: { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000, // 5 seconds connection timeout
-      query_timeout: 10000, // 10 seconds query timeout
+      max: 1, // Max 1 connection per serverless instance (avoids connection leaks/exhaustion)
+      idleTimeoutMillis: 1000, // Close idle connection after 1s to release database slots quickly
+      connectionTimeoutMillis: 5000, // 5 seconds connection queue timeout
+    });
+
+    // Set server-side session timeouts on every connection to prevent locks or deadlocks from hanging
+    pgPool.on('connect', (client) => {
+      client.query('SET statement_timeout = 10000').catch((err) => {
+        console.error('Error setting statement_timeout:', err.message);
+      });
+      client.query('SET lock_timeout = 5000').catch((err) => {
+        console.error('Error setting lock_timeout:', err.message);
+      });
     });
 
     try {

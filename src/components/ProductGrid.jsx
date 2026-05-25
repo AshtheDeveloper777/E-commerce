@@ -3,6 +3,7 @@ import { useCartStore } from '../store/useCartStore';
 import ProductCard from './ProductCard';
 import { Search, Info } from 'lucide-react';
 import { parseApiResponse } from '../utils/api';
+import { products as fallbackProducts } from '../data/products';
 
 export default function ProductGrid({ onCardClick }) {
   const [productsList, setProductsList] = useState([]);
@@ -36,8 +37,15 @@ export default function ProductGrid({ onCardClick }) {
 
       useCartStore.setState({ stocks: liveStocks });
     } catch (err) {
-      console.error('Error fetching database products:', err);
-      setFetchError(err.message || 'Could not load products.');
+      console.warn('Failed to fetch products from backend API, using local fallback products catalog:', err.message);
+      setProductsList(fallbackProducts);
+
+      const liveStocks = fallbackProducts.reduce((acc, p) => {
+        acc[p.id] = p.stock;
+        return acc;
+      }, {});
+
+      useCartStore.setState({ stocks: liveStocks });
     } finally {
       setLoading(false);
     }

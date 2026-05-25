@@ -29,7 +29,14 @@ async function initPool() {
     });
 
     try {
-      await pgPool.query('SELECT 1');
+      // Socket and SSL handshake attempts can hang indefinitely.
+      // Force handshake check to fail fast within 5 seconds.
+      await Promise.race([
+        pgPool.query('SELECT 1'),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Database handshake/connection timeout (5s)')), 5000)
+        ),
+      ]);
       console.log('Connected to PostgreSQL (DATABASE_URL).');
       pool = pgPool;
       return pool;

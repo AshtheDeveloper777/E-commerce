@@ -20,6 +20,12 @@ module.exports = async (req, res) => {
       throw err;
     });
   }
-  await ready;
+  try {
+    await ready;
+  } catch (err) {
+    return res.status(500).json({
+      error: `Database connection failed: ${err.message}. Please check your DATABASE_URL in Vercel → Settings → Environment Variables.`
+    });
+  }
   return handler(req, res);
 };

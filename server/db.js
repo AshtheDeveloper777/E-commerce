@@ -29,13 +29,10 @@ async function initPool() {
       connectionTimeoutMillis: 5000, // 5 seconds connection queue timeout
     });
 
-    // Set server-side session timeouts on every connection to prevent locks or deadlocks from hanging
+    // Set server-side session timeouts in a single query to prevent deprecation warnings or parallel execution conflicts
     pgPool.on('connect', (client) => {
-      client.query('SET statement_timeout = 10000').catch((err) => {
-        console.error('Error setting statement_timeout:', err.message);
-      });
-      client.query('SET lock_timeout = 5000').catch((err) => {
-        console.error('Error setting lock_timeout:', err.message);
+      client.query('SET statement_timeout = 10000; SET lock_timeout = 5000;').catch((err) => {
+        console.error('Error setting session timeouts:', err.message);
       });
     });
 

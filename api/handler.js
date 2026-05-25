@@ -23,9 +23,12 @@ module.exports = async (req, res) => {
   try {
     await ready;
   } catch (err) {
-    return res.status(500).json({
+    res.statusCode = 500;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({
       error: `Database connection failed: ${err.message}. Please check your DATABASE_URL in Vercel → Settings → Environment Variables.`
-    });
+    }));
+    return;
   }
   return handler(req, res);
 };

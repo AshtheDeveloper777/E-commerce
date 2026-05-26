@@ -2,11 +2,154 @@ const { Pool: PgPool } = require('pg');
 
 let pool = null;
 
-function createInMemoryPool() {
-  const { newDb } = require('pg-mem');
-  const mem = newDb({ autoCreateForeignKeyIndices: true });
-  const { Pool } = mem.adapters.createPg();
-  return new Pool();
+// Stateful in-memory database arrays
+const mockUsers = [];
+const mockProducts = [];
+const mockOrders = [];
+
+// Helper to run query mock behavior
+function runMockQuery(sql, params) {
+  const cleanSql = sql.trim().replace(/\s+/g, ' ');
+
+  // 1. SELECT 1 (connection check)
+  if (/^SELECT\s+1/i.test(cleanSql)) {
+    return { rows: [{ '?column?': 1 }] };
+  }
+
+  // 2. CREATE TABLE IF NOT EXISTS
+  if (/^CREATE\s+TABLE/i.test(cleanSql)) {
+    return { rows: [] };
+  }
+
+  // 3. SET session variables
+  if (/^SET\s+/i.test(cleanSql)) {
+    return { rows: [] };
+  }
+
+  // 4. SELECT COUNT(*) FROM products
+  if (/^SELECT\s+COUNT\(\*\)\s+FROM\s+products/i.test(cleanSql)) {
+    return { rows: [{ count: mockProducts.length.toString() }] };
+  }
+
+  // 5. INSERT INTO products
+  if (/^INSERT\s+INTO\s+products/i.test(cleanSql)) {
+    mockProducts.push({
+      id: params[0],
+      name: params[1],
+      category: params[2],
+      price: params[3],
+      rating: params[4],
+      reviews_count: params[5],
+      description: params[6],
+      tag: params[7],
+      image: params[8],
+      color: params[9],
+      stock: params[10],
+      specs: params[11],
+    });
+    return { rows: [] };
+  }
+
+  // 6. UPDATE products image path (syncing)
+  if (/^UPDATE\s+products\s+SET\s+image\s*=\s*\$1\s+WHERE\s+id\s*=\s*\$2/i.test(cleanSql)) {
+    const prod = mockProducts.find(p => p.id === params[1]);
+    if (prod) {
+      prod.image = params[0];
+    }
+    return { rows: [] };
+  }
+
+  // 7. SELECT * FROM products ORDER BY name ASC
+  if (/^SELECT\s+\*\s+FROM\s+products\s+ORDER\s+BY\s+name\s+ASC/i.test(cleanSql)) {
+    const sorted = [...mockProducts].sort((a, b) => a.name.localeCompare(b.name));
+    return { rows: sorted };
+  }
+
+  // 8. SELECT * FROM users WHERE email = $1
+  if (/^SELECT\s+\*\s+FROM\s+users\s+WHERE\s+email\s*=\s*\$1/i.test(cleanSql)) {
+    const user = mockUsers.find(u => u.email === params[0]);
+    return { rows: user ? [user] : [] };
+  }
+
+  // 9. INSERT INTO users ... RETURNING id, full_name, email
+  if (/^INSERT\s+INTO\s+users/i.test(cleanSql)) {
+    const newId = mockUsers.length + 1;
+    const newUser = {
+      id: newId,
+      full_name: params[0],
+      email: params[1],
+      password_hash: params[2],
+      created_at: new Date()
+    };
+    mockUsers.push(newUser);
+    return { rows: [{ id: newUser.id, full_name: newUser.full_name, email: newUser.email }] };
+  }
+
+  // 10. SELECT stock, name FROM products WHERE id = $1 FOR UPDATE
+  if (/^SELECT\s+stock,\s*name\s+FROM\s+products\s+WHERE\s+id\s*=\s*\$1/i.test(cleanSql)) {
+    const prod = mockProducts.find(p => p.id === params[0]);
+    if (!prod) {
+      return { rows: [] };
+    }
+    return { rows: [{ stock: prod.stock, name: prod.name }] };
+  }
+
+  // 11. UPDATE products SET stock = stock - $1 WHERE id = $2
+  if (/^UPDATE\s+products\s+SET\s+stock\s*=\s*stock\s*-\s*\$1\s+WHERE\s+id\s*=\s*\$2/i.test(cleanSql)) {
+    const prod = mockProducts.find(p => p.id === params[1]);
+    if (prod) {
+      prod.stock = prod.stock - parseInt(params[0], 10);
+    }
+    return { rows: [] };
+  }
+
+  // 12. INSERT INTO orders
+  if (/^INSERT\s+INTO\s+orders/i.test(cleanSql)) {
+    const newOrder = {
+      id: params[0],
+      user_id: params[1],
+      payment_id: params[2],
+      amount: params[3],
+      address: params[4],
+      phone: params[5],
+      items: typeof params[6] === 'string' ? JSON.parse(params[6]) : params[6],
+      created_at: new Date()
+    };
+    mockOrders.push(newOrder);
+    return { rows: [] };
+  }
+
+  // 13. Transactions
+  if (/^(BEGIN|COMMIT|ROLLBACK)/i.test(cleanSql)) {
+    return { rows: [] };
+  }
+
+  // Default fallback
+  return { rows: [] };
+}
+
+class MockClient {
+  async query(sql, params) {
+    return runMockQuery(sql, params);
+  }
+  release() {
+    // no-op
+  }
+}
+
+class MockPool {
+  on(event, callback) {
+    // no-op to handle pgPool.on('connect', ...)
+  }
+  async connect() {
+    return new MockClient();
+  }
+  async query(sql, params) {
+    return runMockQuery(sql, params);
+  }
+  async end() {
+    // no-op
+  }
 }
 
 async function initPool() {
@@ -15,7 +158,7 @@ async function initPool() {
   const connectionString = process.env.DATABASE_URL;
 
   if (process.env.VERCEL && !connectionString) {
-    console.warn('DATABASE_URL environment variable is missing on Vercel. Falling back to in-memory database.');
+    console.warn('DATABASE_URL environment variable is missing on Vercel. Falling back to MockPool.');
   }
 
   if (connectionString) {
@@ -51,13 +194,13 @@ async function initPool() {
     } catch (err) {
       pgPool.end().catch(() => {}); // Close in background, do not block the error boundary
       console.warn(`PostgreSQL connection failed: ${err.message}`);
-      console.warn('Falling back to in-memory database (pg-mem) to keep the app fully operational.');
+      console.warn('Falling back to zero-dependency in-memory database MockPool.');
     }
   } else {
-    console.log('No DATABASE_URL — using in-memory database for local development.');
+    console.log('No DATABASE_URL — using in-memory MockPool.');
   }
 
-  pool = createInMemoryPool();
+  pool = new MockPool();
   return pool;
 }
 
@@ -69,3 +212,4 @@ function getPool() {
 }
 
 module.exports = { initPool, getPool };
+

@@ -16,7 +16,7 @@ const PRODUCT_IDS = [
   'prod_aud_06', 'prod_chair_07', 'prod_mon_08', 'prod_stand_09', 'prod_bar_10',
 ];
 
-const localProductImage = (id) => `/api/products/${id}/image`;
+const localProductImage = (id) => `/products/${id}.jpg`;
 const productsImageDir = path.join(__dirname, '..', 'public', 'products');
 
 app.use(cors({ origin: true, credentials: true }));
@@ -37,27 +37,7 @@ app.get('/api/products/:id/image', (req, res) => {
 // Dynamic database schema initialization
 const initializeDatabase = async () => {
   try {
-    console.log('Checking if database is already initialized and seeded...');
-    const { rows } = await getPool().query('SELECT COUNT(*) FROM products');
-    const count = parseInt(rows[0].count, 10);
-    if (count > 0) {
-      console.log('Database tables already exist and are seeded. Skipping schema initialization.');
-      return;
-    }
-    console.log('Database tables exist but are empty. Proceeding to seed products...');
-    await seedProducts();
-    return;
-  } catch (err) {
-    if (err.code === '42P01' || err.message.includes('does not exist')) {
-      console.log('Database tables do not exist. Proceeding to schema initialization...');
-    } else {
-      console.error('Database connection/query failed during check:', err.message);
-      throw err;
-    }
-  }
-
-  try {
-    console.log('Initializing database schemas...');
+    console.log('Verifying database schemas...');
 
     // 1. Users Table
     await getPool().query(`

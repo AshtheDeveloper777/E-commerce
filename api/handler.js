@@ -14,6 +14,13 @@ function normalizePath(req) {
 
 module.exports = async (req, res) => {
   normalizePath(req);
+
+  // Skip database initialization entirely for serving static product images to guarantee instant loading
+  const isImageRoute = /\/api\/products\/[^/]+\/image/i.test(req.url);
+  if (isImageRoute) {
+    return handler(req, res);
+  }
+
   if (!ready) {
     ready = initialize().catch((err) => {
       ready = null; // Reset so that next request retries initialization

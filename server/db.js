@@ -1,4 +1,6 @@
 const { Pool: PgPool } = require('pg');
+const url = require('url');
+const net = require('net');
 
 let pool = null;
 
@@ -152,6 +154,38 @@ class MockPool {
   }
 }
 
+// Helper to check TCP reachability
+function checkDatabaseReachability(host, port) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    let resolved = false;
+
+    socket.setTimeout(2500); // 2.5 seconds timeout
+
+    socket.connect(port, host, () => {
+      resolved = true;
+      socket.destroy();
+      resolve(true);
+    });
+
+    socket.on('error', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+
+    socket.on('timeout', () => {
+      if (!resolved) {
+        resolved = true;
+        socket.destroy();
+        resolve(false);
+      }
+    });
+  });
+}
+
 async function initPool() {
   if (pool) return pool;
 
@@ -162,39 +196,37 @@ async function initPool() {
   }
 
   if (connectionString) {
-    // Strip sslmode from URL so Node pg uses our ssl config (fixes Supabase on Vercel)
-    const dbUrl = connectionString.replace(/[?&]sslmode=[^&]*/g, '').replace(/\?$/, '');
-    const pgPool = new PgPool({
-      connectionString: dbUrl,
-      ssl: { rejectUnauthorized: false },
-      max: 1, // Max 1 connection per serverless instance (avoids connection leaks/exhaustion)
-      idleTimeoutMillis: 1000, // Close idle connection after 1s to release database slots quickly
-      connectionTimeoutMillis: 5000, // 5 seconds connection queue timeout
-      statement_timeout: 5000, // 5 seconds maximum query execution time
-      query_timeout: 5000, // 5 seconds maximum wait for query response
-    });
-
-    // Set server-side session timeouts in a single query to prevent deprecation warnings or parallel execution conflicts
-    pgPool.on('connect', (client) => {
-      client.query('SET statement_timeout = 5000; SET lock_timeout = 5000;').catch((err) => {
-        console.error('Error setting session timeouts:', err.message);
-      });
-    });
-
     try {
-      // Socket and SSL handshake attempts can hang indefinitely.
-      // Force handshake check to fail fast within 5 seconds.
-      await Promise.race([
-        pgPool.query('SELECT 1'),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Database handshake/connection timeout (5s)')), 5000)
-        ),
-      ]);
-      console.log('Connected to PostgreSQL (DATABASE_URL).');
-      pool = pgPool;
-      return pool;
+      // Parse host and port for pre-connection TCP handshake check
+      const parsed = url.parse(connectionString);
+      const host = parsed.hostname;
+      const port = parseInt(parsed.port || '5432', 10);
+
+      console.log(`Checking TCP reachability to database host ${host}:${port}...`);
+      const isReachable = await checkDatabaseReachability(host, port);
+
+      if (!isReachable) {
+        console.warn(`Database host ${host}:${port} is unreachable via TCP. Falling back to MockPool immediately.`);
+      } else {
+        console.log(`Database host ${host}:${port} is reachable. Connecting with PgPool...`);
+        // Strip sslmode from URL so Node pg uses our ssl config (fixes Supabase on Vercel)
+        const dbUrl = connectionString.replace(/[?&]sslmode=[^&]*/g, '').replace(/\?$/, '');
+        const pgPool = new PgPool({
+          connectionString: dbUrl,
+          ssl: { rejectUnauthorized: false },
+          max: 1, // Max 1 connection per serverless instance (avoids connection leaks/exhaustion)
+          idleTimeoutMillis: 1000, // Close idle connection after 1s to release database slots quickly
+          connectionTimeoutMillis: 5000, // 5 seconds connection queue timeout
+          statement_timeout: 5000, // 5 seconds maximum query execution time
+          query_timeout: 5000, // 5 seconds maximum wait for query response
+        });
+
+        await pgPool.query('SELECT 1');
+        console.log('Connected to PostgreSQL (DATABASE_URL) successfully.');
+        pool = pgPool;
+        return pool;
+      }
     } catch (err) {
-      pgPool.end().catch(() => {}); // Close in background, do not block the error boundary
       console.warn(`PostgreSQL connection failed: ${err.message}`);
       console.warn('Falling back to zero-dependency in-memory database MockPool.');
     }

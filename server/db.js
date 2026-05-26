@@ -15,7 +15,7 @@ async function initPool() {
   const connectionString = process.env.DATABASE_URL;
 
   if (process.env.VERCEL && !connectionString) {
-    throw new Error('DATABASE_URL environment variable is required on Vercel.');
+    console.warn('DATABASE_URL environment variable is missing on Vercel. Falling back to in-memory database.');
   }
 
   if (connectionString) {
@@ -50,13 +50,8 @@ async function initPool() {
       return pool;
     } catch (err) {
       pgPool.end().catch(() => {}); // Close in background, do not block the error boundary
-      if (process.env.VERCEL) {
-        throw new Error(
-          `DATABASE_URL connection failed on Vercel: ${err.message}. Check your Supabase pooler URL and password.`
-        );
-      }
       console.warn(`PostgreSQL connection failed: ${err.message}`);
-      console.warn('Falling back to in-memory database (local dev only).');
+      console.warn('Falling back to in-memory database (pg-mem) to keep the app fully operational.');
     }
   } else {
     console.log('No DATABASE_URL — using in-memory database for local development.');

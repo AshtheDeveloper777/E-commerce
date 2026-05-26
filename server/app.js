@@ -39,53 +39,66 @@ const initializeDatabase = async () => {
   try {
     console.log('Verifying database schemas...');
 
-    // 1. Users Table
-    await getPool().query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        full_name VARCHAR(100) NOT NULL,
-        email VARCHAR(100) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+    // Wrap schema queries in a 5-second timeout to prevent slow database hangs from blocking Vercel
+    await Promise.race([
+      (async () => {
+        // 1. Users Table
+        await getPool().query(`
+          CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            full_name VARCHAR(100) NOT NULL,
+            email VARCHAR(100) UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
 
-    // 2. Products Table
-    await getPool().query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id VARCHAR(50) PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        category VARCHAR(50) NOT NULL,
-        price NUMERIC(10,2) NOT NULL,
-        rating NUMERIC(3,2) NOT NULL,
-        reviews_count INTEGER NOT NULL,
-        description TEXT NOT NULL,
-        tag VARCHAR(50),
-        image TEXT NOT NULL,
-        color VARCHAR(20) NOT NULL,
-        stock INTEGER NOT NULL,
-        specs TEXT[] NOT NULL
-      );
-    `);
+        // 2. Products Table
+        await getPool().query(`
+          CREATE TABLE IF NOT EXISTS products (
+            id VARCHAR(50) PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            category VARCHAR(50) NOT NULL,
+            price NUMERIC(10,2) NOT NULL,
+            rating NUMERIC(3,2) NOT NULL,
+            reviews_count INTEGER NOT NULL,
+            description TEXT NOT NULL,
+            tag VARCHAR(50),
+            image TEXT NOT NULL,
+            color VARCHAR(20) NOT NULL,
+            stock INTEGER NOT NULL,
+            specs TEXT[] NOT NULL
+          );
+        `);
 
-    // 3. Orders Table
-    await getPool().query(`
-      CREATE TABLE IF NOT EXISTS orders (
-        id VARCHAR(50) PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id),
-        payment_id VARCHAR(100) NOT NULL,
-        amount NUMERIC(10,2) NOT NULL,
-        address TEXT NOT NULL,
-        phone VARCHAR(15) NOT NULL,
-        items JSONB NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
+        // 3. Orders Table
+        await getPool().query(`
+          CREATE TABLE IF NOT EXISTS orders (
+            id VARCHAR(50) PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id),
+            payment_id VARCHAR(100) NOT NULL,
+            amount NUMERIC(10,2) NOT NULL,
+            address TEXT NOT NULL,
+            phone VARCHAR(15) NOT NULL,
+            items JSONB NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+          );
+        `);
 
-    console.log('Database tables verified successfully.');
-    await seedProducts();
+        console.log('Database tables verified successfully.');
+        await seedProducts();
+      })(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Schema verification / seeding timed out (5s)')), 5000)
+      )
+    ]);
   } catch (err) {
     console.error('Error during database initialization:', err.message);
+    console.warn('Falling back to MockPool due to schema verification timeout/error.');
+    const { forceMockPool } = require('./db');
+    forceMockPool();
+    // Re-verify on MockPool to populate the in-memory arrays immediately
+    await initializeDatabase();
   }
 };
 

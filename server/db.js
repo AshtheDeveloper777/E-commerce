@@ -170,11 +170,13 @@ async function initPool() {
       max: 1, // Max 1 connection per serverless instance (avoids connection leaks/exhaustion)
       idleTimeoutMillis: 1000, // Close idle connection after 1s to release database slots quickly
       connectionTimeoutMillis: 5000, // 5 seconds connection queue timeout
+      statement_timeout: 5000, // 5 seconds maximum query execution time
+      query_timeout: 5000, // 5 seconds maximum wait for query response
     });
 
     // Set server-side session timeouts in a single query to prevent deprecation warnings or parallel execution conflicts
     pgPool.on('connect', (client) => {
-      client.query('SET statement_timeout = 10000; SET lock_timeout = 5000;').catch((err) => {
+      client.query('SET statement_timeout = 5000; SET lock_timeout = 5000;').catch((err) => {
         console.error('Error setting session timeouts:', err.message);
       });
     });
@@ -211,5 +213,9 @@ function getPool() {
   return pool;
 }
 
-module.exports = { initPool, getPool };
+function forceMockPool() {
+  pool = new MockPool();
+  return pool;
+}
 
+module.exports = { initPool, getPool, forceMockPool };

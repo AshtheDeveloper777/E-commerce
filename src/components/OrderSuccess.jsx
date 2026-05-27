@@ -39,7 +39,9 @@ export default function OrderSuccess({ customerData, onContinue }) {
       shipping: getShippingCost(),
       total: getGrandTotal()
     };
-  }, []); // Captures details on mount before clear
+    // Captures details on mount before clear.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCopyPaymentId = () => {
     navigator.clipboard.writeText(orderSummary.paymentId);

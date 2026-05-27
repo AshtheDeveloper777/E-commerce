@@ -9,11 +9,5 @@
       "maxDuration": 30,
       "includeFiles": "server/**,public/products/**"
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    }
-  ]
+  }
 }

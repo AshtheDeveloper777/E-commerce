@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { checkoutSchema } from '../utils/validation';
-import { ArrowLeft, CreditCard, ShieldCheck, AlertCircle, Phone, Lock, Calendar, KeyRound, UserCheck } from 'lucide-react';
+import { ArrowLeft, CreditCard, AlertCircle, Phone, Lock, Calendar, KeyRound, UserCheck } from 'lucide-react';
 import ProductImage from './ProductImage';
 
 export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
   const {
     cart,
     promoCode,
-    promoDiscount,
     getSubtotal,
     getDiscountAmount,
     getTaxAmount,
@@ -222,7 +221,7 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
             ...formData,
             paymentId: `pay_mock_${Math.floor(100000 + Math.random() * 900000)}`
           });
-        } catch (serverErr) {
+        } catch {
           // Always transition to the success screen locally even if backend completely fails
           setLoading(false);
           clearCart();
@@ -320,7 +319,7 @@ export default function CheckoutForm({ onBack, onSuccess, onAuthClick }) {
     try {
       const rzpInstance = new window.Razorpay(options);
       rzpInstance.open();
-    } catch (err) {
+    } catch {
       setLoading(false);
       useCartStore.getState().addToast('Could not initialize Razorpay checkout.');
     }

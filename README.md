@@ -74,7 +74,7 @@ Checkout uses **Razorpay** (INR):
 | Path | Handled by |
 |------|------------|
 | `/`, `/products/*`, assets | Static `dist` (Vite build) |
-| `/api/*` | Serverless function `api/index.cjs` |
+| `/api/*` | Serverless function `api/[...path].js` |
 
 ## Scripts
 

@@ -6,7 +6,6 @@ function isConfigured() {
 
 function getRazorpayInstance() {
   if (!isConfigured()) return null;
-  // eslint-disable-next-line global-require
   const Razorpay = require('razorpay');
   return new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,

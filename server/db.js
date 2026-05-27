@@ -140,7 +140,7 @@ class MockClient {
 }
 
 class MockPool {
-  on(event, callback) {
+  on(_event, _callback) {
     // no-op to handle pgPool.on('connect', ...)
   }
   async connect() {

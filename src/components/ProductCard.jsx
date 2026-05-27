@@ -9,19 +9,6 @@ export default function ProductCard({ product, onCardClick }) {
   const isFavorited = wishlist.some((item) => item.id === product.id);
   const currentStock = stocks[product.id] ?? 0;
 
-  // Custom glows based on color setting
-  const getGlowColor = (color) => {
-    switch (color) {
-      case 'purple': return 'rgba(138, 43, 226, 0.35)';
-      case 'pink': return 'rgba(236, 72, 153, 0.35)';
-      case 'blue': return 'rgba(59, 130, 246, 0.35)';
-      case 'cyan': return 'rgba(6, 182, 212, 0.35)';
-      case 'amber': return 'rgba(245, 158, 11, 0.35)';
-      case 'red': return 'rgba(239, 68, 68, 0.35)';
-      default: return 'rgba(138, 43, 226, 0.35)';
-    }
-  };
-
   return (
     <article className="product-card" style={{ cursor: 'pointer' }} onClick={() => onCardClick(product)}>
       {/* Product Image Area */}

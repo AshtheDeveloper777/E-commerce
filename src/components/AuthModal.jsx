@@ -16,7 +16,7 @@ const registerSchema = z.object({
 });
 
 export default function AuthModal({ isOpen, onClose }) {
-  const { login, register, error, loading, set } = useAuthStore();
+  const { login, register, error, loading } = useAuthStore();
   const [tab, setTab] = useState('login'); // 'login' | 'register'
   
   const [formData, setFormData] = useState({

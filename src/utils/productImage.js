@@ -1,9 +1,9 @@
 const PLACEHOLDER = '/products/placeholder.svg';
 
-/** Product images via API so they work on Vercel production. */
+/** Product images are bundled in Vite's public/products folder. */
 export function getProductImageUrl(product) {
   if (!product?.id) return PLACEHOLDER;
-  return `/api/products/${product.id}/image`;
+  return `/products/${product.id}.jpg`;
 }
 
 export { PLACEHOLDER };

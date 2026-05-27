@@ -1,5 +1,6 @@
 const serverless = require('serverless-http');
 const { app, initialize } = require('../server/app');
+const { forceMockPool } = require('../server/db');
 
 const handler = serverless(app);
 let ready;
@@ -15,14 +16,28 @@ function normalizePath(req) {
 module.exports = async (req, res) => {
   normalizePath(req);
 
-  // Skip database initialization entirely for serving static product images to guarantee instant loading
-  const isImageRoute = /\/api\/products\/[^/]+\/image/i.test(req.url);
-  if (isImageRoute) {
-    return handler(req, res);
+  // Product images are static Vercel assets. Do not send them through the
+  // serverless function; that can time out while streaming files.
+  const imageMatch = req.url.match(/\/api\/products\/([^/?]+)\/image/i);
+  if (imageMatch) {
+    res.statusCode = 308;
+    res.setHeader('Location', `/products/${imageMatch[1]}.jpg`);
+    res.end();
+    return;
   }
 
   if (!ready) {
-    ready = initialize().catch((err) => {
+    ready = Promise.race([
+      initialize(),
+      new Promise((resolve) => {
+        setTimeout(async () => {
+          console.warn('Initialization timed out; using in-memory database fallback.');
+          forceMockPool();
+          await initialize();
+          resolve();
+        }, 4000);
+      }),
+    ]).catch((err) => {
       ready = null; // Reset so that next request retries initialization
       throw err;
     });

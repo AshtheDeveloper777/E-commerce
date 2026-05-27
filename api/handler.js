@@ -1,6 +1,7 @@
 const serverless = require('serverless-http');
 const { app, initialize } = require('../server/app');
 const { forceMockPool } = require('../server/db');
+const { products } = require('../server/catalog');
 
 const handler = serverless(app);
 let ready;
@@ -23,6 +24,14 @@ module.exports = async (req, res) => {
     res.statusCode = 308;
     res.setHeader('Location', `/products/${imageMatch[1]}.jpg`);
     res.end();
+    return;
+  }
+
+  if (/^\/api\/products(?:\?.*)?$/i.test(req.url)) {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=86400');
+    res.end(JSON.stringify(products));
     return;
   }
 

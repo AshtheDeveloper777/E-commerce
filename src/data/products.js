@@ -118,6 +118,86 @@ export const products = [
       "Zero-Latency 3.5mm Headphone Jack",
       "Hardware Gain Control & Mute Button"
     ]
+  },
+  {
+    id: "prod_chair_07",
+    name: "Apex Ergo Office Chair",
+    category: "Accessories",
+    price: 34999.00,
+    rating: 4.8,
+    reviewsCount: 94,
+    description: "Highly adjustable ergonomic office chair. Designed with elastic mesh support, synchronous tilt adjustments, dynamic auto-adjusting lumbar locks, and soft padded 3D armrests.",
+    tag: "Premium Ergo",
+    image: "/products/prod_chair_07.jpg",
+    color: "purple",
+    stock: 3,
+    specs: [
+      "Breathable Mesh Back Support",
+      "Synchronous Auto-Tilt Lock",
+      "Adaptive Dynamic Lumbar Pillow",
+      "3D Adjustable Height Armrests",
+      "Heavy-Duty Reinforced Nylon Base"
+    ]
+  },
+  {
+    id: "prod_mon_08",
+    name: "Horizon 34\" Curved Monitor",
+    category: "Accessories",
+    price: 54999.00,
+    rating: 4.9,
+    reviewsCount: 73,
+    description: "34-inch curved ultrawide desktop monitor. Sports a crisp WQHD (3440 x 1440) resolution, vibrant IPS panel, smooth 144Hz refresh rate, and 90W USB-C hub connectivity.",
+    tag: "Ultrawide Hub",
+    image: "/products/prod_mon_08.jpg",
+    color: "blue",
+    stock: 2,
+    specs: [
+      "34-inch 21:9 Curved IPS Screen",
+      "WQHD 3440 x 1440 Crystal Resolution",
+      "144Hz Fluid Refresh Gaming Rate",
+      "Integrated 90W USB-C Docking Port",
+      "HDR400 Certified Vivid Display"
+    ]
+  },
+  {
+    id: "prod_stand_09",
+    name: "Solace Walnut Monitor Riser",
+    category: "Accessories",
+    price: 4999.00,
+    rating: 4.7,
+    reviewsCount: 112,
+    description: "Crafted solid american walnut wooden desk riser. Elevates monitor to ergonomic eye level, clearing underneath space for clean setup cable storage.",
+    tag: "Premium Walnut",
+    image: "/products/prod_stand_09.jpg",
+    color: "amber",
+    stock: 10,
+    specs: [
+      "100% Solid Premium American Walnut",
+      "Comfortable Ergonomic Elevating Lift",
+      "Powder-Coated Sleek Steel Legs",
+      "Non-Slip Cushioned Rubber Shoes",
+      "Max Weight Capacity up to 45kg"
+    ]
+  },
+  {
+    id: "prod_bar_10",
+    name: "Aura LED Monitor Lightbar",
+    category: "Accessories",
+    price: 5999.00,
+    rating: 4.8,
+    reviewsCount: 145,
+    description: "Sleek monitor lightbar that clamps atop screens. Illuminates desks without creating screen glare, featuring smart touch dimming and temperature color controls.",
+    tag: "Smart Lamp",
+    image: "/products/prod_bar_10.jpg",
+    color: "cyan",
+    stock: 8,
+    specs: [
+      "Asymmetric Desk Illumination Design",
+      "Eliminates Screen Glare completely",
+      "Stepless Color Temperature controls",
+      "Smart Auto-Dimming Brightness sensor",
+      "Convenient USB-Powered clamping arm"
+    ]
   }
 ];
 

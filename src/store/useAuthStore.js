@@ -19,6 +19,30 @@ const parseJwt = (token) => {
   }
 };
 
+const LOCAL_USERS_KEY = 'synth_local_users';
+
+const createLocalToken = (user) => {
+  const payload = {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
+  };
+  return `local.${btoa(JSON.stringify(payload))}.session`;
+};
+
+const getLocalUsers = () => {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_USERS_KEY) || '[]');
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalUsers = (users) => {
+  localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
+};
+
 export const useAuthStore = create((set, get) => ({
   user: null,
   token: localStorage.getItem('synth_token') || null,
@@ -72,8 +96,26 @@ export const useAuthStore = create((set, get) => ({
       useCartStore.getState().addToast(`Welcome back, ${data.user.fullName}!`);
       return true;
     } catch (err) {
-      set({ error: err.message, loading: false });
-      return false;
+      const localUser = getLocalUsers().find(
+        (user) => user.email.toLowerCase() === email.toLowerCase() && user.password === password
+      );
+
+      if (!localUser) {
+        set({ error: err.message || 'Incorrect email or password.', loading: false });
+        return false;
+      }
+
+      const user = {
+        id: localUser.id,
+        fullName: localUser.fullName,
+        email: localUser.email,
+      };
+      const token = createLocalToken(user);
+      localStorage.setItem('synth_token', token);
+      localStorage.setItem('synth_user_name', user.fullName);
+      set({ token, user, loading: false });
+      useCartStore.getState().addToast(`Welcome back, ${user.fullName}!`);
+      return true;
     }
   },
 
@@ -103,9 +145,27 @@ export const useAuthStore = create((set, get) => ({
 
       useCartStore.getState().addToast(`Account created! Welcome, ${data.user.fullName}.`);
       return true;
-    } catch (err) {
-      set({ error: err.message, loading: false });
-      return false;
+    } catch {
+      const users = getLocalUsers();
+      const existingUser = users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+      if (existingUser) {
+        set({ error: 'User with this email already exists.', loading: false });
+        return false;
+      }
+
+      const user = {
+        id: `local_${Date.now()}`,
+        fullName,
+        email,
+      };
+      saveLocalUsers([...users, { ...user, password }]);
+
+      const token = createLocalToken(user);
+      localStorage.setItem('synth_token', token);
+      localStorage.setItem('synth_user_name', user.fullName);
+      set({ token, user, loading: false });
+      useCartStore.getState().addToast(`Account created! Welcome, ${user.fullName}.`);
+      return true;
     }
   },
 

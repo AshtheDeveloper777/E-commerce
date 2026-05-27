@@ -1,61 +1,14 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useCartStore } from '../store/useCartStore';
+import React, { useState, useMemo } from 'react';
 import ProductCard from './ProductCard';
 import { Search, Info } from 'lucide-react';
-import { parseApiResponse } from '../utils/api';
-import { products as fallbackProducts } from '../data/products';
+import { categories, products } from '../data/products';
 
 export default function ProductGrid({ onCardClick }) {
-  const [productsList, setProductsList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState(null);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   const [sortBy, setSortBy] = useState('featured');
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      setLoading(true);
-      setFetchError(null);
-      const response = await fetch('/api/products');
-      const data = await parseApiResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || `Failed to load products (${response.status})`);
-      }
-
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid product data from server.');
-      }
-
-      setProductsList(data);
-
-      const liveStocks = data.reduce((acc, p) => {
-        acc[p.id] = p.stock;
-        return acc;
-      }, {});
-
-      useCartStore.setState({ stocks: liveStocks });
-    } catch (err) {
-      console.warn('Failed to fetch products from backend API, using local fallback products catalog:', err.message);
-      setProductsList(fallbackProducts);
-
-      const liveStocks = fallbackProducts.reduce((acc, p) => {
-        acc[p.id] = p.stock;
-        return acc;
-      }, {});
-
-      useCartStore.setState({ stocks: liveStocks });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
-  const categories = ["All", "Keyboards", "Audio", "Accessories"];
+  const productsList = products;
 
   // Filter and sort products using useMemo for maximum performance
   const filteredProducts = useMemo(() => {
@@ -101,7 +54,6 @@ export default function ProductGrid({ onCardClick }) {
             placeholder="Search premium workspace hardware..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            disabled={loading}
           />
         </div>
 
@@ -111,7 +63,6 @@ export default function ProductGrid({ onCardClick }) {
             className="filter-select"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            disabled={loading}
             aria-label="Filter by category"
           >
             {categories.map((cat) => (
@@ -126,7 +77,6 @@ export default function ProductGrid({ onCardClick }) {
             className="filter-select"
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            disabled={loading}
             aria-label="Sort products"
           >
             <option value="featured">Featured</option>
@@ -138,57 +88,7 @@ export default function ProductGrid({ onCardClick }) {
       </div>
 
       {/* Grid Display */}
-      {loading ? (
-        // Premium Skeleton Loader grid
-        <div className="products-grid">
-          {[...Array(6)].map((_, i) => (
-            <div 
-              key={i} 
-              className="product-card glass"
-              style={{ 
-                height: '420px', 
-                animation: 'float 2s ease-in-out infinite', 
-                opacity: 0.6,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                padding: '20px'
-              }}
-            >
-              <div style={{ width: '100%', height: '180px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--secondary)' }} />
-              <div style={{ width: '60%', height: '20px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--secondary)' }} />
-              <div style={{ width: '40%', height: '14px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--secondary)' }} />
-              <div style={{ width: '90%', height: '40px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--secondary)', marginTop: '8px' }} />
-              <div style={{ width: '100%', height: '36px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--secondary)', marginTop: 'auto' }} />
-            </div>
-          ))}
-        </div>
-      ) : fetchError ? (
-        <div
-          className="glass"
-          style={{
-            padding: '48px',
-            borderRadius: 'var(--radius-lg)',
-            textAlign: 'center',
-            color: 'var(--destructive)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <Info size={36} />
-          <h3>Could not load products</h3>
-          <p style={{ color: 'var(--muted-foreground)', maxWidth: '420px' }}>{fetchError}</p>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={fetchProducts}
-          >
-            Retry
-          </button>
-        </div>
-      ) : filteredProducts.length > 0 ? (
+      {filteredProducts.length > 0 ? (
         <div className="products-grid">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} onCardClick={onCardClick} />
